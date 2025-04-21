@@ -1,0 +1,8 @@
+.MuiInputBase-root input:-webkit-autofill {
+    box-shadow: 0 0 0 1000px white inset;
+    -webkit-text-fill-color: #000;
+  }
+
+  .MuiTextField-root {
+    size: small;   /* Typical input height */
+  }
