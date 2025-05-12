@@ -379,7 +379,7 @@ function BuildingPlannerPage() {
           gutterBottom
           sx={{ color: HEADER_TEXT_COLOR, mb: 0 }}
         >
-          Building 2D Planner
+          Plano de las instalaciones
         </Typography>
       </Box>
 
