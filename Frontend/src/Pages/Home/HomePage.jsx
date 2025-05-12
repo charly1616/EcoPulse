@@ -5,6 +5,7 @@ import { useState } from "react";
 import Dashboard from "./Dashboard.jsx";
 import ManageUser from "./ManageUser.jsx";
 import DataPushes from "./DataPushes.jsx";
+import BuildingPlannerPage from "../Enterprise/BuildingPlannerPage.jsx"
 
 export default function HomePage() {
     const [vistaSeleccionada, setVistaSeleccionada] = useState('dashboard');
@@ -25,6 +26,7 @@ export default function HomePage() {
             {vistaSeleccionada === 'dashboard' && <Dashboard/>}
             {vistaSeleccionada === 'manageUser' && <ManageUser/>}
             {vistaSeleccionada === 'datapushes' && <DataPushes/>}
+            {vistaSeleccionada === 'structure' && <BuildingPlannerPage/>}
         </Box>
     )
 }

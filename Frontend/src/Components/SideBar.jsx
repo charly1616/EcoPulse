@@ -98,7 +98,7 @@ export default function SideBar({onSeleccionarVista}) {
                     { canEdit &&
                     <>
                     <ListItem disablePadding sx={ItemStyle}>
-                        <ListItemButton sx={selected==='instalation'?ListBtnStSelect:ListBtnSt} onClick={() => handleChangeView('dashboard')}>
+                        <ListItemButton sx={selected==='instalation'?ListBtnStSelect:ListBtnSt} onClick={() => handleChangeView('structure')}>
                         <ListItemIcon> 
                                 <LocationCityIcon sx={{ fontSize: 30 }}/>
                             </ListItemIcon>
