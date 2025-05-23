@@ -16,8 +16,9 @@ export default function User({ user, onEdit, onDelete }) { // Added onEdit and o
     const { mutate: confirmUser, isPending: isConfirming } = useMutation({
         mutationFn: async () => {
             try {
+                console.log(user._id)
                 const res = await fetch(`/api/auth/confirm/${user._id}`, { // Ensure this path is correct
-                    method: "POST",
+                    method: "GET",
                 });
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || "Algo salió mal al confirmar");

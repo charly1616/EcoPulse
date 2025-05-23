@@ -5,6 +5,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, PieChart, Pie, Cell, Legend
 } from 'recharts';
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 const energyData = [
   { month: 'Jan', consumption: 400 },
@@ -25,8 +26,8 @@ const departmentData = [
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
 const Dashboard = () => {
-
-  const { data: authUser } = useQuery({ queryKey: ["authUser"] });
+  const queryClient = useQueryClient();
+  const authUser = queryClient.getQueryData(["authUser"]);
 
 
   return (
@@ -43,7 +44,7 @@ const Dashboard = () => {
 
 
       <Box sx={{ padding: 2, display: 'flex', flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 2 }}>
-        <Box item xs={12} md={6} >
+        <Box xs={12} md={6} >
           <Paper elevation={2} sx={{ p: 2 }}>
             <Typography variant="h6" gutterBottom>
               Consumo mensual (kWh)
@@ -60,7 +61,7 @@ const Dashboard = () => {
           </Paper>
         </Box>
 
-        <Box item xs={12} md={6}>
+        <Box xs={12} md={6}>
           <Paper elevation={3} sx={{ p: 2 }}>
             <Typography variant="h6" gutterBottom>
               Consumo por instalación
@@ -88,7 +89,7 @@ const Dashboard = () => {
           </Paper>
         </Box>
 
-        <Box item xs={12}>
+        <Box xs={12}>
           <Paper elevation={3} sx={{ p: 2 }}>
             <Typography variant="h6" gutterBottom>
               Comparativo semestral (kWh)

@@ -1,6 +1,5 @@
 import mongoose from "mongoose";
-import { type } from "os";
-import { float } from "webidl-conversions";
+import DataPush from "./datapush_model.js";
 
 const deviceSchema = new mongoose.Schema(
     {
@@ -9,15 +8,16 @@ const deviceSchema = new mongoose.Schema(
             required: true,
         },
         Position: {
-            type: Number,
+            type: [Number],
             required: true,
         },
         Attributes: {
-            type: String,
+            type: Map,
+            of: mongoose.Schema.Types.Mixed,
             required: false
         },
         Consumption: {
-            type: float,
+            type: Number, // ✅ Cambiado de Double a Number
             required: false
         },
         AreaID: {
@@ -28,6 +28,36 @@ const deviceSchema = new mongoose.Schema(
     },
     { timestamps: true }
 );
+
+// Middleware para eliminar datapushes asociados al eliminar un device
+deviceSchema.pre("findOneAndDelete", async function (next) {
+    const device = await this.model.findOne(this.getFilter());
+    if (device) {
+        await DataPush.deleteMany({ DeviceID: device._id });
+    }
+    next();
+});
+
+
+deviceSchema.pre("deleteMany", async function (next) {
+    const filter = this.getFilter(); // obtiene el filtro usado en deleteMany
+    const devices = await this.model.find(filter); // busca los dispositivos que serán eliminados
+    const deviceIds = devices.map(device => device._id); // extrae sus IDs
+
+    if (deviceIds.length > 0) {
+        await DataPush.deleteMany({ DeviceID: { $in: deviceIds } });
+    }
+
+    next();
+});
+
+
+deviceSchema.virtual('datapushes', {
+    ref: 'DataPush',
+    localField: '_id',
+    foreignField: 'DeviceID',
+});
+
 
 const Device = mongoose.model("Device", deviceSchema);
 

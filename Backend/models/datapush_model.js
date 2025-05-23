@@ -11,6 +11,14 @@ const datapushSchema = new mongoose.Schema(
             type: Date,
             required: false,
         },
+        Time: {
+            type: Number,
+            default: 60
+        },
+        Consumption: {
+            type: Number,
+            required: true
+        }
     },
     { timestamps: true }
 );

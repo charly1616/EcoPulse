@@ -6,11 +6,12 @@ import './index.css'
 import App from './App.jsx'
 
 const queryClient = new QueryClient({
-  defaultOptions: {
-      queries: {
-        refetchOnWindowFocus: false,
-      }
-  }
+   defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutos de datos "frescos"
+      refetchOnWindowFocus: false,
+    },
+  },
 })
 
 

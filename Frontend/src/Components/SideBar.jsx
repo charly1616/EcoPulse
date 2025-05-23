@@ -37,7 +37,7 @@ export default function SideBar({onSeleccionarVista}) {
     const [selected, setSelected] = useState('dashboard');
     const queryClient = useQueryClient();
 
-    const { data: authUser } = useQuery({ queryKey: ["authUser"] });
+      const authUser = queryClient.getQueryData(["authUser"]);
     const isAdmin = authUser && (authUser.Type === "Admin");
     const canEdit = authUser && (authUser.Type === "Admin" || authUser.Type === "Tech");
 

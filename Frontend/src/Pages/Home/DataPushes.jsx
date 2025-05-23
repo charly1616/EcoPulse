@@ -6,6 +6,8 @@ import {
 import {
   FilterList, Bolt, CalendarMonth, AccessTime, LocationCity, Devices
 } from '@mui/icons-material';
+import { useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 
 const initialData = [
   { nombre: 'Computador1', piso: 'Piso3 B', fecha: 'Enero 3 2025', hora: '1 PM', lectura: -300 },
@@ -52,35 +54,46 @@ const initialData = [
 ];
 
 const commonCellSx = {
-  fontSize: '0.8rem', // Smaller font size
-  padding: '4px 8px', // Reduced padding (vertical horizontal)
+  fontSize: "0.8rem", // Smaller font size
+  padding: "4px 8px", // Reduced padding (vertical horizontal)
 };
 
 const headerIconSx = {
-  verticalAlign: 'middle',
+  verticalAlign: "middle",
   mr: 0.5, // Margin right for spacing
-  fontSize: '1.1rem', // Slightly smaller icons
+  fontSize: "1.1rem", // Slightly smaller icons
 };
 
+
+
 const DataPushes = () => {
+  const queryClient = useQueryClient();
+  const authUser = queryClient.getQueryData(["authUser"]);
+
+  const [dataPushes] = useState( () => {
+    const v = queryClient.getQueryData(['dataPushes']);
+    return v ?? [];
+  })
+
   const [filters, setFilters] = useState({
-    nombre: '',
-    piso: '',
-    fecha: '',
-    hora: '',
-    lectura: ''
+    DeviceName: "",
+    FacilityName: "",
+    Date: "",
+    Hour: "",
+    Consumpt: "",
   });
 
   const handleFilterChange = (field, value) => {
-    setFilters(prev => ({ ...prev, [field]: value }));
+    setFilters((prev) => ({ ...prev, [field]: value }));
   };
 
-  const filteredData = initialData.filter(row =>
-    row.nombre.toLowerCase().includes(filters.nombre.toLowerCase()) &&
-    row.piso.toLowerCase().includes(filters.piso.toLowerCase()) &&
-    row.fecha.toLowerCase().includes(filters.fecha.toLowerCase()) &&
-    row.hora.toLowerCase().includes(filters.hora.toLowerCase()) &&
-    row.lectura.toString().includes(filters.lectura)
+  const filteredData = (dataPushes ?? []).filter(
+    (row) =>
+      row.DeviceName.toLowerCase().includes(filters.DeviceName.toLowerCase()) &&
+      row.FacilityName.toLowerCase().includes(filters.FacilityName.toLowerCase()) &&
+      row.Date.toLowerCase().includes(filters.Date.toLowerCase()) &&
+      row.Hour.toLowerCase().includes(filters.Hour.toLowerCase()) &&
+      row.Consumpt.toString().includes(filters.Consumpt)
   );
 
   return (
@@ -89,18 +102,26 @@ const DataPushes = () => {
       minHeight="100vh"
       sx={{
         width: "100vw",
-        // height: "100vh", // Let content define height or use maxHeight
-        display: 'flex',
-        flexDirection: 'column',
+        display: "flex",
+        flexDirection: "column",
         padding: 2, // Reduced overall padding
         gap: 2, // Reduced gap
       }}
     >
-      <Typography variant="h6" gutterBottom sx={{ color: '#555', paddingInline: 1, fontWeight: 'normal' }}>
+      <Typography
+        variant="h6"
+        gutterBottom
+        sx={{ color: "#555", paddingInline: 1, fontWeight: "normal" }}
+      >
         Lecturas de Consumo Energético
       </Typography>
-      <TableContainer component={Paper} sx={{ maxHeight: 'calc(100vh - 100px)', overflow: 'auto' }}> {/* Added maxHeight for scrollability */}
-        <Table stickyHeader size="small"> {/* stickyHeader and size="small" */}
+      <TableContainer
+        component={Paper}
+        sx={{ maxHeight: "calc(100vh - 100px)", overflow: "auto" }}
+      >
+        {/* Added maxHeight for scrollability */}
+        <Table stickyHeader size="small">
+          {/* stickyHeader and size="small" */}
           <TableHead>
             <TableRow>
               <TableCell sx={commonCellSx}>
@@ -120,35 +141,47 @@ const DataPushes = () => {
               </TableCell>
             </TableRow>
             <TableRow>
-              {[ 'nombre', 'piso', 'fecha', 'hora', 'lectura'].map((field) => (
-                <TableCell key={field} sx={{ ...commonCellSx, py: 0.5 }}> {/* Less vertical padding for filter row */}
+              {["nombre", "piso", "fecha", "hora", "lectura"].map((field) => (
+                <TableCell key={field} sx={{ ...commonCellSx, py: 0.5 }}>
+                  {/* Less vertical padding for filter row */}
                   <TextField
                     variant="standard"
                     placeholder="Filtrar"
                     fullWidth
-                    size="small" // Smaller TextField
+                    size="small"
                     value={filters[field]}
                     onChange={(e) => handleFilterChange(field, e.target.value)}
-                    InputProps={{ sx: { fontSize: '0.8rem' } }} // Font size for input text
-                    sx={{ '& .MuiInput-underline:before': { borderBottomWidth: '1px' } }} // Thinner underline
+                    InputProps={{ sx: { fontSize: "0.8rem" } }} // Font size for input text
+                    sx={{
+                      "& .MuiInput-underline:before": {
+                        borderBottomWidth: "1px",
+                      },
+                    }} // Thinner underline
                   />
                 </TableCell>
               ))}
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredData.map((row, index) => (
-              <TableRow key={index} hover> {/* Added hover for better UX */}
-                <TableCell sx={commonCellSx}>{row.nombre}</TableCell>
-                <TableCell sx={commonCellSx}>{row.piso}</TableCell>
-                <TableCell sx={commonCellSx}>{row.fecha}</TableCell>
-                <TableCell sx={commonCellSx}>{row.hora}</TableCell>
-                <TableCell sx={{ ...commonCellSx, color: row.lectura < 0 ? 'hotpink' : 'mediumseagreen', fontWeight: '500' }}>
-                  {row.lectura > 0 ? `+${row.lectura}kw` : `${row.lectura}kw`}
+            {(filteredData ?? []).map((row, index) => (
+              <TableRow key={index} hover>
+                {/* Added hover for better UX */}
+                <TableCell sx={commonCellSx}>{row.DeviceName}</TableCell>
+                <TableCell sx={commonCellSx}>{row.FacilityName}</TableCell>
+                <TableCell sx={commonCellSx}>{row.Date}</TableCell>
+                <TableCell sx={commonCellSx}>{row.Hour}</TableCell>
+                <TableCell
+                  sx={{
+                    ...commonCellSx,
+                    color: row.lectura < 0 ? "hotpink" : "mediumseagreen",
+                    fontWeight: "500",
+                  }}
+                >
+                  {row.Consumpt > 0 ? `+${row.Consumpt}kw` : `${row.Consumpt}kw`}
                 </TableCell>
               </TableRow>
             ))}
-             {filteredData.length === 0 && (
+            {filteredData.length === 0 && (
               <TableRow>
                 <TableCell colSpan={5} align="center" sx={commonCellSx}>
                   No hay datos que coincidan con los filtros.
