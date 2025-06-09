@@ -8,7 +8,7 @@ export default defineConfig({
     port: 4000,
     proxy: {
 			"/api": {
-				target: "http://localhost:31415",
+				target: "https://ecopulse-backend-d6cl.onrender.com",
 				changeOrigin: true,
 			},
 		},
