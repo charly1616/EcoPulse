@@ -158,7 +158,7 @@ export function useBuildingPlannerState() {
         body: JSON.stringify({
           Name: name,
           Position: [x, y],
-          Type: Type,ñ
+          Type: Type,
           Consumption: consumption,
           AreaID: areaId,
         }),

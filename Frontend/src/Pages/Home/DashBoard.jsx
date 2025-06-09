@@ -1,11 +1,10 @@
 import React from 'react';
 import { Box, Typography, Grid, Paper } from '@mui/material';
-import { useQuery } from '@tanstack/react-query';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, PieChart, Pie, Cell, Legend
 } from 'recharts';
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 
 const energyData = [
   { month: 'Jan', consumption: 400 },
