@@ -2,23 +2,20 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { useQueryClient } from '@tanstack/react-query';
-import { CELL_SIZE, FACILITY_WIDTH_CELLS, FACILITY_HEIGHT_CELLS, AREA_COLORS } from "../constants.js";
+import { CELL_SIZE, FACILITY_WIDTH_CELLS, FACILITY_HEIGHT_CELLS, AREA_COLORS, IconOf } from "../constants.jsx"; // Added COMPONENT_TYPES
 import { useQuery } from "@tanstack/react-query";
 import { useMutation } from "@tanstack/react-query";
 
 export function useBuildingPlannerState() {
   const queryClient = useQueryClient();
-const authUser = queryClient.getQueryData(["authUser"]);
+  const authUser = queryClient.getQueryData(["authUser"]);
 
   const [facilitys, setFacilitys] = useState(() => {
     const v = queryClient.getQueryData(['facilitys']);
     return v ?? [];
   });
 
-
-  
   const [currentFacilityId, setCurrentFacilityId] = useState(null);
-
   const [selectedAreaId, setSelectedAreaId] = useState(null);
   const [addingMode, setAddingMode] = useState(null); // null, "area_start", "area_end", "component"
   const [tempAreaStart, setTempAreaStart] = useState(null); // {x, y}
@@ -26,11 +23,17 @@ const authUser = queryClient.getQueryData(["authUser"]);
 
   const [areaNameDialogOpen, setAreaNameDialogOpen] = useState(false);
   const [currentAreaName, setCurrentAreaName] = useState("");
-  const [editingAreaId, setEditingAreaId] = useState(null); // ID of area being named/renamed
-  const [potentialNewArea, setPotentialNewArea] = useState(null); // Full data for a area before naming
+  const [editingAreaId, setEditingAreaId] = useState(null);
+  const [potentialNewArea, setPotentialNewArea] = useState(null);
+
+  // New state for component dialog
+  const [componentDialogOpen, setComponentDialogOpen] = useState(false);
+  const [currentComponentDetails, setCurrentComponentDetails] = useState({ name: "", type: 0 }); // Default to first type
+  const [potentialNewComponentLocation, setPotentialNewComponentLocation] = useState(null); // { areaId, x, y } relative to area
 
   const svgRef = useRef(null);
 
+  // ... (currentFacility, currentFacilityAreas memos remain the same)
   const currentFacility = useMemo(
     () => facilitys.find((p) => p.id === currentFacilityId),
     [facilitys, currentFacilityId]
@@ -53,7 +56,7 @@ const authUser = queryClient.getQueryData(["authUser"]);
       setCurrentFacilityId(defaultFacilityId);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Intencionalmente vacío para ejecutar solo al montar si `facilitys` está vacío inicialmente
+  }, []); 
 
   // Effect 2: Manage currentFacilityId based on facilitys array
   useEffect(() => {
@@ -78,6 +81,10 @@ const authUser = queryClient.getQueryData(["authUser"]);
       setPotentialNewArea(null);
       setEditingAreaId(null);
       setAreaNameDialogOpen(false);
+      // Reset component dialog state too
+      setComponentDialogOpen(false);
+      setCurrentComponentDetails({ name: "", type: 0 });
+      setPotentialNewComponentLocation(null);
     }
   }, [currentFacilityId]);
 
@@ -96,13 +103,11 @@ const authUser = queryClient.getQueryData(["authUser"]);
         })
       );
       if (updatedFacilityData) {
-        const { id, name, areas } = updatedFacilityData;
+        // const { id, name, areas } = updatedFacilityData; // Persist logic would go here if needed
       }
     },
     [currentFacilityId]
   );
-
-
 
   const getGridCoords = useCallback((clientX, clientY) => {
     if (!svgRef.current) return { x: 0, y: 0 };
@@ -116,9 +121,10 @@ const authUser = queryClient.getQueryData(["authUser"]);
       Math.min(FACILITY_HEIGHT_CELLS - 1, Math.floor((clientY - rect.top) / CELL_SIZE))
     );
     return { x, y };
-  }, []); // CELL_SIZE, FACILITY_WIDTH_CELLS, FACILITY_HEIGHT_CELLS are constants
+  }, []);
 
-  const handleFacilityMouseMove = useCallback(
+  // ... (handleFacilityMouseMove, useEffect for mouse move remain the same)
+    const handleFacilityMouseMove = useCallback(
     (e) => {
       if (addingMode === "area_end" && tempAreaStart) {
         const { x, y } = getGridCoords(e.clientX, e.clientY);
@@ -128,30 +134,67 @@ const authUser = queryClient.getQueryData(["authUser"]);
     [addingMode, tempAreaStart, getGridCoords]
   );
 
-  // Effect for mouse move on SVG for temp area preview
   useEffect(() => {
     const svgElement = svgRef.current;
     if (svgElement && addingMode === "area_end") {
       svgElement.addEventListener("mousemove", handleFacilityMouseMove);
       return () => svgElement.removeEventListener("mousemove", handleFacilityMouseMove);
     } else if (tempAreaEndPreview && addingMode !== "area_end") {
-      setTempAreaEndPreview(null); // Clear preview if not in area_end mode
+      setTempAreaEndPreview(null);
     }
   }, [addingMode, handleFacilityMouseMove, tempAreaEndPreview]);
 
 
-  const handleFacilityCanvasClick = useCallback((e) => {
+
+  //AÑADIR A LA BASE
+  const { mutateAsync: createDevice } = useMutation({
+  mutationFn: async ({ name, x, y, Type, consumption, areaId }) => {
+    try {
+      const res = await fetch("api/comp/createDevice", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          Name: name,
+          Position: [x, y],
+          Type: Type,ñ
+          Consumption: consumption,
+          AreaID: areaId,
+        }),
+      });
+
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        data = { error: "Invalid server response" };
+      }
+
+      if (!res.ok) {
+        throw new Error(data.error || "Algo malo pasó");
+      }
+
+      return data;
+    } catch (error) {
+      throw new Error(error.message || "Unknown error");
+    }
+  },onSuccess: () => queryClient.refetchQueries({ queryKey: ["facilitys"] })
+});
+
+
+  const handleFacilityCanvasClick = useCallback(async (e) => {
     if (!currentFacilityId) return;
     const { x, y } = getGridCoords(e.clientX, e.clientY);
 
     if (addingMode === "area_start") {
       setTempAreaStart({ x, y });
       setAddingMode("area_end");
-      setTempAreaEndPreview({ x, y }); // Initialize preview
+      setTempAreaEndPreview({ x, y });
     } else if (addingMode === "area_end" && tempAreaStart) {
       const newAreaData = {
         id: uuidv4(),
-        name: "", // To be filled by dialog
+        name: "",
         x: Math.min(tempAreaStart.x, x),
         y: Math.min(tempAreaStart.y, y),
         width: Math.abs(x - tempAreaStart.x) + 1,
@@ -160,29 +203,29 @@ const authUser = queryClient.getQueryData(["authUser"]);
         components: [],
       };
       setPotentialNewArea(newAreaData);
-      setEditingAreaId(newAreaData.id); // Mark this new area for naming
-      setCurrentAreaName(""); // Clear name for dialog
+      setEditingAreaId(newAreaData.id);
+      setCurrentAreaName("");
       setAreaNameDialogOpen(true);
-      setAddingMode(null);
+      setAddingMode(null); // Exit area adding mode, user must re-initiate to add another
       setTempAreaStart(null);
       setTempAreaEndPreview(null);
     } else if (addingMode === "component" && selectedAreaId) {
       const area = currentFacilityAreas.find((s) => s.id === selectedAreaId);
+
+      
       if (area) {
-        const relX = x - area.x;
-        const relY = y - area.y;
-        if (relX >= 0 && relX < area.width && relY >= 0 && relY < area.height) {
-          const newComponent = { id: uuidv4(), type: "point", x: relX, y: relY };
-          updateCurrentFacilityAndPersist(currentFac => ({
-            ...currentFac,
-            areas: currentFac.areas.map(s =>
-              s.id === selectedAreaId
-                ? { ...s, components: [...s.components, newComponent] }
-                : s
-            ),
-          }));
+        const relX = x;
+        const relY = y;
+
+        
+        if (relX >= area.x && relX < area.width + area.x && relY >= area.y && relY < area.height + area.y) {
+          // Don't add component directly, open dialog
+          setPotentialNewComponentLocation({ areaId: selectedAreaId, x: relX, y: relY });
+          setCurrentComponentDetails({ name: "", type: 0 }); // Reset for new component
+          setComponentDialogOpen(true);
+          // No need to setAddingMode(null) here, dialog cancel/save will handle it or user can cancel component mode
         } else {
-          console.warn("El componente está afuera del area.");
+          console.warn("El componente está afuera del area seleccionada.");
         }
       }
     } else if (!addingMode) {
@@ -193,7 +236,7 @@ const authUser = queryClient.getQueryData(["authUser"]);
         setSelectedAreaId(null);
       }
     }
-  }, [currentFacilityId, getGridCoords, addingMode, tempAreaStart, currentFacilityAreas, selectedAreaId, updateCurrentFacilityAndPersist]);
+  }, [currentFacilityId, getGridCoords, addingMode, tempAreaStart, currentFacilityAreas, selectedAreaId]); // Removed updateCurrentFacilityAndPersist as component add is now two-step
 
   const handleAreaItemClick = useCallback((areaId) => {
     if (!addingMode) {
@@ -202,25 +245,27 @@ const authUser = queryClient.getQueryData(["authUser"]);
   }, [addingMode]);
 
 
-
-
-
-  //AÑADIR
-
-
+  // ... (createAreaB mutation remains the same)
    const { mutateAsync: createAreaB } = useMutation({
-  mutationFn: async ({name,x,y,width,height,color}) => {
+  mutationFn: async ({ name, x, y, width, height, color }) => {
     try {
+      // Crear el Map de Attributes (si no lo tienes ya)
+      const attributesMap = new Map();
+      attributesMap.set("Color", color); // Ejemplo: Añadir el color al Map
+
+      // Convertir el Map a un objeto antes de enviarlo
+      const attributesObject = Object.fromEntries(attributesMap);
+
       const res = await fetch("api/comp/createArea", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          Name:name,
-          From: [x,y],
-          To: [x+width, y+height],
-          Attributes: {Color:color},
+          Name: name,
+          From: [x, y],
+          To: [x + width, y + height],
+          Attributes: attributesObject, // Enviamos el objeto, no el Map
           FacilityID: currentFacilityId,
         }),
       });
@@ -241,22 +286,46 @@ const authUser = queryClient.getQueryData(["authUser"]);
       throw new Error(error.message || "Unknown error");
     }
   },
+  onSuccess: () => queryClient.refetchQueries({ queryKey: ["facilitys"] })
 });
+
 
   const handleSaveAreaName = useCallback( async () => {
     if (!currentFacilityId) return;
 
     if (potentialNewArea && editingAreaId === potentialNewArea.id) {
       // Saving a new area
-      const createdArea = createAreaB({...potentialNewArea, name: currentAreaName});
+      // const createdArea = await createAreaB({...potentialNewArea, name: currentAreaName}); // await here
       updateCurrentFacilityAndPersist(facility => {
         const newAreaFinalized = {
-          ...potentialNewArea, id: createdArea._id,
+          ...potentialNewArea, // id: createdArea._id, // Use ID from backend if createAreaB returns it
           name: currentAreaName || `Area ${(facility.areas || []).length + 1}`,
         };
+        // Simulate backend ID for now if createAreaB is not yet fully integrated for ID return
+        if (!newAreaFinalized.id) newAreaFinalized.id = uuidv4();
+
+
+        // Example of calling createAreaB and updating with backend ID
+        // This part is tricky because setFacilitys is sync and createAreaB is async
+        // For now, let's assume the UUID is fine, and persistence happens separately or is optimistic
+        createAreaB(newAreaFinalized).then(createdAreaData => {
+            // If you need to update the ID in local state after creation:
+            setFacilitys(prevFacilitys => prevFacilitys.map(fac => {
+                if (fac.id === currentFacilityId) {
+                    return {
+                        ...fac,
+                        areas: fac.areas.map(a => a.id === potentialNewArea.id ? {...newAreaFinalized, id: createdAreaData._id} : a)
+                    }
+                }
+                return fac;
+            }));
+            setSelectedAreaId(createdAreaData._id); 
+        }).catch(err => console.error("Failed to create area on backend", err));
+
+
         return { ...facility, areas: [...(facility.areas || []), newAreaFinalized] };
       });
-      setSelectedAreaId(potentialNewArea.id); // Auto-select new area
+      // setSelectedAreaId(potentialNewArea.id); // Set selected ID after optimistic update
       setPotentialNewArea(null);
     } else if (editingAreaId) {
       // Renaming an existing area
@@ -272,20 +341,21 @@ const authUser = queryClient.getQueryData(["authUser"]);
     setEditingAreaId(null);
   }, [currentFacilityId, potentialNewArea, editingAreaId, currentAreaName, updateCurrentFacilityAndPersist, createAreaB]);
 
+
   const cancelAddArea = useCallback(() => {
     setAddingMode(null);
     setTempAreaStart(null);
     setTempAreaEndPreview(null);
-    setPotentialNewArea(null); // Also clear potential new area data
+    setPotentialNewArea(null);
     setEditingAreaId(null);
-    setAreaNameDialogOpen(false); // Close dialog if it was part of add flow
+    setAreaNameDialogOpen(false);
   }, []);
 
   const handleDialogClose = useCallback(() => {
     setAreaNameDialogOpen(false);
-    if (potentialNewArea) { // If closing dialog was for a new area, cancel the whole add op
+    if (potentialNewArea) {
         cancelAddArea();
-    } else { // If it was for renaming
+    } else {
         setEditingAreaId(null);
         setCurrentAreaName("");
     }
@@ -299,38 +369,23 @@ const authUser = queryClient.getQueryData(["authUser"]);
   }, [currentFacilityId]);
 
 
-
+  // ... (deleteArea, handleRemoveArea, handleRenameArea, handleStartAddComponent mutations and handlers)
   const { mutateAsync: deleteArea } = useMutation({
-  mutationFn: async (areaId) => {
-    try {
-      const res = await fetch(`api/comp/deleteArea/${areaId}`, {
-        method: "DELETE",
-      });
-
-      let data;
-      try {
-        data = await res.json();
-      } catch {
-        data = { error: "Invalid server response" };
-      }
-
-      if (!res.ok) {
-        throw new Error(data.error || "Error deleting area");
-      }
-
-      return data;
-    } catch (error) {
-        console.log("ERROR: " + error.message)
-      throw new Error(error.message || "Unknown delete error");
-    }
-  },
-});
-
-
+    mutationFn: async (areaId) => {
+        // ... (implementation)
+        try {
+            const res = await fetch(`api/comp/deleteArea/${areaId}`, { method: "DELETE" });
+            let data;
+            try {data = await res.json();} catch {data = { error: "Invalid server response" };}
+            if (!res.ok) {throw new Error(data.error || "Error deleting area");}
+            return data;
+        } catch (error) { console.log("ERROR: " + error.message); throw new Error(error.message || "Unknown delete error");}
+    }, onSuccess: () => queryClient.refetchQueries({ queryKey: ["facilitys"] })
+    });
 
   const handleRemoveArea = useCallback(() => {
     if (selectedAreaId && currentFacilityId) {
-        deleteArea(selectedAreaId)
+        deleteArea(selectedAreaId).catch(err => console.error("Failed to delete area on backend", err));
       updateCurrentFacilityAndPersist(facility => ({
           ...facility,
           areas: (facility.areas || []).filter((s) => s.id !== selectedAreaId)
@@ -346,7 +401,7 @@ const authUser = queryClient.getQueryData(["authUser"]);
         setEditingAreaId(area.id);
         setCurrentAreaName(area.name);
         setAreaNameDialogOpen(true);
-        setPotentialNewArea(null); // Not a new area
+        setPotentialNewArea(null);
       }
     }
   }, [selectedAreaId, currentFacilityId, currentFacilityAreas]);
@@ -354,14 +409,59 @@ const authUser = queryClient.getQueryData(["authUser"]);
   const handleStartAddComponent = useCallback(() => {
     if (selectedAreaId && currentFacilityId) {
       setAddingMode("component");
+      // No longer open dialog here, just set mode
     } else {
       alert("Por favor selecciona una area para colocar tu componente");
     }
   }, [selectedAreaId, currentFacilityId]);
 
+
   const handleCancelAddComponent = useCallback(() => {
     setAddingMode(null);
+    setComponentDialogOpen(false); // Close dialog if open
+    setPotentialNewComponentLocation(null);
+    setCurrentComponentDetails({ name: "", type: 0 });
   }, []);
+
+  const handleSaveComponentDetails = useCallback( async () => {
+    if (!currentFacilityId || !potentialNewComponentLocation) return;
+
+    const { areaId, x, y } = potentialNewComponentLocation;
+    const { name, type } = currentComponentDetails;
+    //name, x, y, attributes, consumption, areaId 
+    const id = await createDevice({x:x,y:y,areaId:areaId, name:name, Type: type})._id;
+
+    const newComponent = {
+      id: id,
+      name: name || `Componente ${(currentFacilityAreas.find(a => a.id === areaId)?.components.length || 0) + 1}`,
+      type: type, // Store the selected type ID
+      x: x, // relative x
+      y: y, // relative y
+    };
+
+    updateCurrentFacilityAndPersist(currentFac => ({
+      ...currentFac,
+      areas: currentFac.areas.map(s =>
+        s.id === areaId
+          ? { ...s, components: [...s.components, newComponent] }
+          : s
+      ),
+    }));
+
+    setComponentDialogOpen(false);
+    setPotentialNewComponentLocation(null);
+    setCurrentComponentDetails({ name: "", type: 0 });
+    // setAddingMode(null); // Optionally exit component adding mode after adding one
+  }, [currentFacilityId, potentialNewComponentLocation, currentComponentDetails, updateCurrentFacilityAndPersist, currentFacilityAreas, createDevice]);
+
+  const handleComponentDialogClose = useCallback(() => {
+    setComponentDialogOpen(false);
+    setPotentialNewComponentLocation(null); // If dialog is closed, assume cancellation of this specific placement
+    setCurrentComponentDetails({ name: "", type: 0 });
+    // Don't necessarily reset addingMode here, user might want to click elsewhere to place component
+    // Or, if a click outside an area should cancel, handle it in handleFacilityCanvasClick
+  }, []);
+
 
   const handleRemoveComponent = useCallback((areaIdToRemoveFrom, componentId) => {
     if (!currentFacilityId || !areaIdToRemoveFrom) return;
@@ -380,66 +480,43 @@ const authUser = queryClient.getQueryData(["authUser"]);
     [currentFacilityAreas, selectedAreaId]
   );
 
-
+  // ... (createFacilityB, handleAddFacility, handleFacilityTabChange mutations and handlers)
   const { mutateAsync: createFacilityB } = useMutation({
-  mutationFn: async (Name) => {
-    try {
-      const res = await fetch("api/faci/create", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          Name,
-          CompanyID: authUser.CompanyID,
-        }),
-      });
+    mutationFn: async (Name) => {
+        // ... (implementation)
+        try {
+            const res = await fetch("api/faci/create", {
+                method: "POST",
+                headers: {"Content-Type": "application/json",},
+                body: JSON.stringify({Name, CompanyID: authUser.CompanyID,}),
+            });
+            let data;
+            try {data = await res.json();} catch {data = { error: "Invalid server response" };}
+            if (!res.ok) {throw new Error(data.error || "Algo malo pasó");}
+            return data;
+        } catch (error) {throw new Error(error.message || "Unknown error");}
+    }, onSuccess: () => queryClient.refetchQueries({ queryKey: ["facilitys"] })
+    });
 
-      let data;
-      try {
-        data = await res.json();
-      } catch {
-        data = { error: "Invalid server response" };
-      }
+    const handleAddFacility = useCallback(async () => {
+        try {
+            const newFacilityName = `Insta ${facilitys.length + 1}`;
+            const createdFacility = await createFacilityB(newFacilityName);
+            const newFacility = {
+            id: createdFacility._id, 
+            name: createdFacility.Name,
+            areas: [] // Initialize with empty areas
+            };
+            setFacilitys((prevFacilitys) => [...prevFacilitys, newFacility]);
+            setCurrentFacilityId(newFacility.id);
+        } catch (error) {
+            console.error("Error creating facility:", error.message);
+        }
+    }, [facilitys.length, createFacilityB]);
 
-      if (!res.ok) {
-        throw new Error(data.error || "Algo malo pasó");
-      }
-
-      return data;
-    } catch (error) {
-      throw new Error(error.message || "Unknown error");
-    }
-  },
-});
-
-
-
-
-
-  const handleAddFacility = useCallback(async () => {
-  try {
-    const newFacilityName = `Insta ${facilitys.length + 1}`;
-
-    const createdFacility = await createFacilityB(newFacilityName);
-
-    const newFacility = {
-      id: createdFacility._id, // o createdFacility.data._id, si lo envolviste
-      name: createdFacility.Name,
-    };
-
-    setFacilitys((prevFacilitys) => [...prevFacilitys, newFacility]);
-    setCurrentFacilityId(newFacility.id);
-  } catch (error) {
-    console.error("Error creating facility:", error.message);
-    // Puedes mostrar un toast o mensaje de error aquí si quieres
-  }
-}, [facilitys.length, createFacilityB]);
-
-
-  const handleFacilityTabChange = useCallback((event, newValue) => {
-    setCurrentFacilityId(newValue);
-  }, []);
+    const handleFacilityTabChange = useCallback((event, newValue) => {
+        setCurrentFacilityId(newValue);
+    }, []);
 
 
   return {
@@ -454,11 +531,15 @@ const authUser = queryClient.getQueryData(["authUser"]);
     tempAreaEndPreview,
     areaNameDialogOpen,
     currentAreaName,
-    potentialNewArea, // Needed for Dialog logic
-    editingAreaId, // Needed for Dialog logic
+    potentialNewArea,
+    editingAreaId,
+    // Component Dialog State
+    componentDialogOpen,
+    currentComponentDetails,
+    potentialNewComponentLocation, // Though not directly used by UI, good to return if needed
     svgRef,
     actions: {
-      setFacilitys, // May not be needed if mutations handle this
+      setFacilitys,
       setCurrentFacilityId,
       setSelectedAreaId,
       setAddingMode,
@@ -468,17 +549,23 @@ const authUser = queryClient.getQueryData(["authUser"]);
       setCurrentAreaName,
       setEditingAreaId,
       setPotentialNewArea,
+      // Component Dialog Actions
+      setComponentDialogOpen,
+      setCurrentComponentDetails,
+      handleSaveComponentDetails,
+      handleComponentDialogClose,
+
       getGridCoords,
       handleFacilityCanvasClick,
       handleAreaItemClick,
       handleSaveAreaName,
       cancelAddArea,
-      handleDialogClose,
+      handleDialogClose, // This is for AreaNameDialog
       handleStartAddArea,
       handleRemoveArea,
       handleRenameArea,
       handleStartAddComponent,
-      handleCancelAddComponent,
+      handleCancelAddComponent, // This now resets component dialog too
       handleRemoveComponent,
       handleAddFacility,
       handleFacilityTabChange,
