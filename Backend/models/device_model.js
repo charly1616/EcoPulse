@@ -24,6 +24,11 @@ const deviceSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: "Area",
             required: true,
+        },
+        Type: {
+            type: Number,
+            required:false,
+            default: 0
         }
     },
     { timestamps: true }

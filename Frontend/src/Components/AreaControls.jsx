@@ -12,7 +12,7 @@ import AddBoxIcon from "@mui/icons-material/AddBox";
 import RemoveCircleOutlineIcon from "@mui/icons-material/RemoveCircleOutline";
 import EditIcon from "@mui/icons-material/Edit";
 import CancelIcon from "@mui/icons-material/Cancel";
-import { HEADER_TEXT_COLOR } from "../constants.js";
+import { HEADER_TEXT_COLOR } from "../constants.jsx";
 
 function AreaControls({
   addingMode,

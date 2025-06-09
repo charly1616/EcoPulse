@@ -2,7 +2,7 @@
 import React from "react";
 import { Box, Tabs, Tab, Button, Tooltip } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
-import { HEADER_BG_COLOR } from "../constants.js";
+import { HEADER_BG_COLOR } from "../constants.jsx";
 
 function FacilityTabs({
   facilitys,

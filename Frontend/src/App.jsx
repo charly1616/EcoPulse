@@ -102,7 +102,7 @@ const {
 					,name: ar.Name, x: ar.From[0],y: ar.From[1]
 					, width: (ar.To[0] -  ar.From[0]), height: (ar.To[1] -  ar.From[1])
 					, components: (ar.devices ?? []).map( dev => {
-						return {type: 1, x:dev.Position[0], y:dev.Position[1], name: dev.Name, id:dev._id}
+						return {type: dev.Type, x:dev.Position[0], y:dev.Position[1], name: dev.Name, id:dev._id}
 					}) }
             })}
         }
